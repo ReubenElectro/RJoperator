@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RJ Ops Portal</title>
+<style>
+  :root{
+    --accent:#3E6FB0;
+    --bg:#F5F4F1; --surface:#FFFFFF; --fill:#ECEBE7; --fill2:#E2E0DA;
+    --line:#DEDCD5; --text:#1C1B19; --muted:#716F68; --radius:12px; --fs:14px;
+  }
+  [data-theme="dark"]{
+    --bg:#171614; --surface:#1F1E1B; --fill:#26251F; --fill2:#302E27;
+    --line:#39372F; --text:#F1EFEA; --muted:#9C998F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:var(--fs);}
+  #login{min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;}
+  #login h1{font-size:13px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; font-weight:600; margin:0;}
+  #login .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:32px 36px; width:300px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  #login input{width:100%; margin-top:10px; padding:11px 12px; font-size:14px; background:var(--fill); border:1px solid var(--line); border-radius:8px; color:var(--text);}
+  #login button{width:100%; margin-top:12px; padding:11px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; cursor:pointer;}
+  #err{color:#B3423B; font-size:13px; min-height:16px; margin-top:8px;}
+  #app{display:none; min-height:100vh;}
+  .shell{display:flex; min-height:100vh;}
+  .sidebar{width:200px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--line); padding:24px 16px; display:flex; flex-direction:column;}
+  .brand{font-size:15px; font-weight:700; padding:0 8px 20px;}
+  .brand span{display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:2px; word-break:break-all;}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:10px 10px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:2px;}
+  .nav-item.active, .nav-item:hover{background:var(--fill); color:var(--text);}
+  .nav-dot{width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0;}
+  .nav-group{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:16px 0 6px 10px;}
+  .sidebar-foot{margin-top:auto; font-size:12px; color:var(--muted); cursor:pointer; padding:10px;}
+  .main{flex:1; padding:32px 40px; max-width:900px;}
+  .view{display:none;} .view.active{display:block;}
+  .head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;}
+  .head h2{font-size:22px; margin:0; font-weight:700;}
+  .head p{font-size:13px; color:var(--muted); margin:5px 0 0;}
+  .badge{font-size:11px; padding:5px 10px; border-radius:20px; background:var(--fill2); color:var(--text);}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:24px;}
+  .stat{background:var(--fill); border-radius:var(--radius); padding:14px 16px;}
+  .stat .v{font-size:22px; font-weight:700;} .stat .l{font-size:12px; color:var(--muted); margin-top:2px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px;}
+  .proj{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; cursor:pointer; transition:.15s;}
+  .proj:hover{border-color:var(--accent); transform:translateY(-1px);}
+  .proj .n{font-size:14px; font-weight:700;}
+  .proj .s{font-size:11px; color:var(--muted); margin-top:8px; text-transform:capitalize; display:flex; align-items:center; gap:6px;}
+  .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+  .d-planning{background:#B08A3E;} .d-building{background:#3E6FB0;} .d-live{background:#3E8B57;} .d-paused{background:#9A9890;}
+  .add-proj{border:1.5px dashed var(--line); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:600; font-size:13px; cursor:pointer; min-height:78px;}
+  .add-proj:hover{border-color:var(--accent); color:var(--accent);}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px;}
+  .card h3{font-size:14px; margin:0 0 12px; font-weight:700;}
+  .list-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .list-row:last-child{border-bottom:none;}
+  .list-row a{color:var(--text); text-decoration:none; font-weight:600;}
+  .list-row a:hover{color:var(--accent);}
+  .list-row .m{color:var(--muted); font-size:12px;}
+  #log, #jarvisLog{display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; margin-bottom:10px;}
+  #jarvisLog{max-height:380px;}
+  .msg{font-size:13px; padding:9px 11px; border-radius:8px; max-width:85%;}
+  .bot{background:var(--fill); align-self:flex-start;} .user{background:var(--accent); color:#fff; align-self:flex-end;}
+  .row{display:flex; gap:8px;}
+  #chatIn, #jarvisIn{flex:1; padding:10px 12px; background:var(--fill); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:13px;}
+  #chatSend, #jarvisSend{padding:10px 16px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; cursor:pointer;}
+  .foot{font-size:12px; color:var(--muted); margin-top:10px;}
+  .quick{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .qbtn{padding:7px 12px; border-radius:20px; background:var(--fill); border:1px solid var(--line); font-size:12px; cursor:pointer; color:var(--text);}
+  .qbtn:hover{border-color:var(--accent);}
+  .pulse-wrap{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+  .pulse{width:10px; height:10px; border-radius:50%; background:#3E8B57; box-shadow:0 0 0 0 rgba(62,139,87,.5); animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,139,87,.5);}70%{box-shadow:0 0 0 8px rgba(62,139,87,0);}100%{box-shadow:0 0 0 0 rgba(62,139,87,0);}}
+  .back{font-size:13px; color:var(--muted); cursor:pointer; margin-bottom:16px; display:inline-block;}
+  .field{margin-bottom:16px; max-width:420px;}
+  .field label{font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;}
+  .field input, .field select, .field textarea{width:100%; padding:11px 12px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit;}
+  .field textarea{min-height:100px; resize:vertical;}
+  .save{padding:10px 18px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;}
+  .saved{font-size:12px; color:#3E8B57; margin-left:10px; opacity:0; transition:opacity .2s;}
+  .swatches{display:flex; gap:10px; margin-bottom:24px;}
+  .swatch{width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid transparent;}
+  .swatch.active{border-color:var(--text);}
+  .theme-toggle{display:flex; gap:8px; margin-bottom:24px;}
+  .theme-btn{padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:var(--fill); cursor:pointer; font-size:13px; font-weight:600; color:var(--text);}
+  .theme-btn.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .danger{padding:10px 16px; border-radius:8px; border:1px solid #B3423B; background:transparent; color:#B3423B; font-weight:600; cursor:pointer; font-size:13px;}
+  #notesArea{width:100%; min-height:280px; padding:14px; background:var(--surface); border:1px solid var(--line); border-radius:12px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical;}
+  .cf-row{display:flex; gap:8px; margin-bottom:8px;}
+  .cf-row input{flex:1;}
+  .cf-add{background:var(--fill); border:1px dashed var(--line); border-radius:8px; padding:8px 12px; font-size:12px; cursor:pointer; color:var(--muted);}
+  .activity-row{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .activity-row:last-child{border-bottom:none;}
+  .activity-row .t{color:var(--muted); font-size:11px; white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>RJ Ops Portal</h1>
+  <div class="card">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">Sign in</div>
+    <input id="email" type="email" placeholder="email">
+    <input id="password" type="password" placeholder="password">
+    <button onclick="doLogin()">Sign in</button>
+    <div id="err"></div>
+  </div>
+</div>
+
+<div id="app">
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand">RJ Ops Portal<span id="userEmail"></span></div>
+    <div class="nav-item active" data-view="hub" onclick="switchView('hub')"><span class="nav-dot"></span>Hub</div>
+    <div class="nav-item" data-view="jarvis" onclick="switchView('jarvis')"><span class="nav-dot"></span>Jarvis</div>
+    <div class="nav-item" data-view="notes" onclick="switchView('notes')"><span class="nav-dot"></span>Notes</div>
+    <div class="nav-item" data-view="activity" onclick="switchView('activity')"><span class="nav-dot"></span>Activity</div>
+    <div class="nav-group">Integrations</div>
+    <div class="nav-item" data-view="github" onclick="switchView('github')"><span class="nav-dot"></span>GitHub</div>
+    <div class="nav-group">Config</div>
+    <div class="nav-item" data-view="settings" onclick="switchView('settings')"><span class="nav-dot"></span>Settings</div>
+    <div class="sidebar-foot" onclick="doLogout()">Sign out</div>
+  </div>
+
+  <div class="main">
+
+    <div id="view-hub" class="view active">
+      <div class="head"><div><h2>Hub</h2><p>Live data from your Firestore project</p></div><span class="badge" id="countBadge"></span></div>
+      <div class="stats" id="stats"></div>
+      <p id="loadingMsg" class="foot">Loading projects…</p>
+      <div class="grid" id="grid"></div>
+      <div class="card">
+        <h3>Quick ask</h3>
+        <div id="log"></div>
+        <div class="row"><input id="chatIn" type="text" placeholder="Ask about a project status"><button id="chatSend">Send</button></div>
+      </div>
+    </div>
+
+    <div id="view-jarvis" class="view">
+      <div class="head"><div><h2>Jarvis</h2><p>Your ops assistant console</p></div></div>
+      <div class="pulse-wrap"><span class="pulse"></span><span style="font-size:13px; color:var(--muted);">Local mode, no external calls</span></div>
+      <div class="quick" id="quickAsks"></div>
+      <div class="card" style="margin-bottom:0;">
+        <div id="jarvisLog"></div>
+        <div class="row" style="margin-top:12px;"><input id="jarvisIn" type="text" placeholder="Ask Jarvis about your projects"><button id="jarvisSend">Send</button></div>
+        <div class="foot">Keyword matching against your live Firestore data.</div>
+      </div>
+    </div>
+
+    <div id="view-notes" class="view">
+      <div class="head"><div><h2>Notes</h2><p>Synced to your account, not just this browser</p></div></div>
+      <textarea id="notesArea" placeholder="Jot anything down…"></textarea>
+      <p class="foot" id="notesSaved">Saves automatically to Firestore.</p>
+    </div>
+
+    <div id="view-activity" class="view">
+      <div class="head"><div><h2>Activity</h2><p>What's changed, synced to your account</p></div></div>
+      <div class="card"><div id="activityList"></div></div>
+    </div>
+
+    <div id="view-github" class="view">
+      <div class="head"><div><h2>GitHub</h2><p>Your real repos — read-only for now</p></div></div>
+      <div class="card"><h3>Repositories</h3><div id="repoList"></div></div>
+      <p class="foot">Write access (creating issues, pushing commits from here) needs the Claude GitHub connector's write permission enabled — still pending from earlier.</p>
+    </div>
+
+    <div id="view-detail" class="view">
+      <span class="back" onclick="switchView('hub')">&larr; back to hub</span>
+      <div class="field"><label>Project name</label><input id="f-name"></div>
+      <div class="field"><label>Status</label>
+        <select id="f-status">
+          <option value="planning">Planning</option><option value="building">Building</option>
+          <option value="live">Live</option><option value="paused">Paused</option>
+        </select>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="f-notes"></textarea></div>
+      <div class="field">
+        <label>Custom fields</label>
+        <div id="cfRows"></div>
+        <div class="cf-add" onclick="addCfRow()">+ Add custom field</div>
+      </div>
+      <button class="save" onclick="saveProject()">Save to Firestore</button>
+      <button class="danger" onclick="deleteProject()" style="margin-left:8px;">Delete</button>
+      <span class="saved" id="savedMsg">Saved</span>
+    </div>
+
+    <div id="view-settings" class="view">
+      <div class="head"><div><h2>Settings</h2><p>Synced to your account, follows you everywhere</p></div></div>
+      <div class="field"><label>Accent color</label></div>
+      <div class="swatches" id="swatches"></div>
+      <div class="field"><label>Theme</label></div>
+      <div class="theme-toggle">
+        <button class="theme-btn" id="btn-light" onclick="setTheme('light')">Light</button>
+        <button class="theme-btn" id="btn-dark" onclick="setTheme('dark')">Dark</button>
+      </div>
+      <div class="field"><label>Data</label></div>
+      <button class="save" onclick="seedProjects()">Seed sample projects into Firestore</button>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAqRnISdxfOoyGWXYX2RHyvfNYO1hhCY_0",
+    authDomain: "rj-ops-portal.firebaseapp.com",
+    projectId: "rj-ops-portal",
+    storageBucket: "rj-ops-portal.firebasestorage.app",
+    messagingSenderId: "422887869537",
+    appId: "1:422887869537:web:60998bbcc5eaa436042e20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const colors = ["#3E6FB0","#3E8B57","#B0523E","#8A5EC2","#B08A3E","#3E9CA8"];
+  const repos = [
+    {name:"RJoperator", meta:"HTML · this repo"},
+    {name:"family-health-apps", meta:"JavaScript"},
+    {name:"chasetown-saints", meta:"HTML"},
+    {name:"matchup", meta:"HTML · \"footie results\""},
+    {name:"electro-fut", meta:""}
+  ];
+  const seedDefaults = [
+    {name:"Chasetown Saints", status:"planning", notes:"", customFields:[]},
+    {name:"FC26 companion", status:"planning", notes:"", customFields:[]},
+    {name:"FitCore fitness", status:"planning", notes:"", customFields:[]},
+    {name:"FotMob clone", status:"planning", notes:"", customFields:[]},
+    {name:"Shoplet", status:"planning", notes:"", customFields:[]}
+  ];
+  const quickAsks = ["What's live right now?","What needs attention?","List everything planning"];
+
+  let projects = [];
+  let activeId = null;
+  let uid = null;
+  let userSettings = {accent:"#3E6FB0", theme:"light", notes:"", activity:[]};
+  let notesSaveTimer = null;
+
+  window.doLogin = function(){
+    const email = document.getElementById("email").value.trim();
+    const pw = document.getElementById("password").value;
+    signInWithEmailAndPassword(auth, email, pw).catch(err => { document.getElementById("err").textContent = err.message; });
+  };
+  window.doLogout = function(){ signOut(auth); };
+
+  onAuthStateChanged(auth, async user => {
+    if(user){
+      uid = user.uid;
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      document.getElementById("userEmail").textContent = user.email;
+      await loadUserDoc();
+      await loadProjects();
+      initStaticPanels();
+    } else {
+      document.getElementById("app").style.display = "none";
+      document.getElementById("login").style.display = "flex";
+    }
+  });
+
+  async function loadUserDoc(){
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    if(snap.exists()){
+      userSettings = { accent:"#3E6FB0", theme:"light", notes:"", activity:[], ...snap.data() };
+    } else {
+      await setDoc(ref, userSettings);
+    }
+    applySettings();
+  }
+  async function persistUserDoc(){
+    await setDoc(doc(db, "users", uid), userSettings);
+  }
+  async function logActivity(text){
+    userSettings.activity = [{text, at: new Date().toLocaleString()}, ...(userSettings.activity||[])].slice(0,30);
+    await persistUserDoc();
+    if(document.getElementById("view-activity").classList.contains("active")) renderActivity();
+  }
+
+  async function loadProjects(){
+    document.getElementById("loadingMsg").style.display = "block";
+    try{
+      const snap = await getDocs(collection(db, "projects"));
+      projects = [];
+      snap.forEach(d => projects.push({ id: d.id, customFields:[], ...d.data() }));
+    }catch(e){
+      document.getElementById("loadingMsg").textContent = "Couldn't load projects: " + e.message;
+      return;
+    }
+    document.getElementById("loadingMsg").style.display = "none";
+    renderHub();
+  }
+
+  window.seedProjects = async function(){
+    for(const p of seedDefaults){ await addDoc(collection(db, "projects"), p); }
+    await logActivity("Seeded 5 sample projects");
+    await loadProjects();
+    switchView("hub");
+  };
+
+  window.switchView = function(name){
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-"+name).classList.add("active");
+    document.querySelectorAll(".nav-item[data-view]").forEach(n => n.classList.toggle("active", n.dataset.view === name));
+    if(name === "activity") renderActivity();
+  };
+
+  function renderHub(){
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    projects.forEach(p => {
+      const d = document.createElement("div");
+      d.className = "proj";
+      d.onclick = () => showDetail(p.id);
+      d.innerHTML = '<div class="n">'+p.name+'</div><div class="s"><span class="dot d-'+p.status+'"></span>'+p.status+'</div>';
+      grid.appendChild(d);
+    });
+    const addCard = document.createElement("div");
+    addCard.className = "add-proj";
+    addCard.textContent = "+ Add project";
+    addCard.onclick = addProject;
+    grid.appendChild(addCard);
+    document.getElementById("countBadge").textContent = projects.length + " projects";
+    const counts = {};
+    projects.forEach(p => counts[p.status] = (counts[p.status]||0)+1);
+    const stats = document.getElementById("stats");
+    stats.innerHTML = "";
+    ["planning","building","live","paused"].forEach(s => {
+      const el = document.createElement("div");
+      el.className = "stat";
+      el.innerHTML = '<div class="v">'+(counts[s]||0)+'</div><div class="l">'+s+'</div>';
+      stats.appendChild(el);
+    });
+  }
+
+  window.addProject = async function(){
+    const name = prompt("New project name:");
+    if(!name || !name.trim()) return;
+    const data = { name: name.trim(), status: "planning", notes: "", customFields: [] };
+    const ref = await addDoc(collection(db, "projects"), data);
+    projects.push({ id: ref.id, ...data });
+    await logActivity("Added project \"" + name.trim() + "\"");
+    renderHub();
+  };
+
+  window.showDetail = function(id){
+    activeId = id;
+    const p = projects.find(x => x.id === id);
+    document.getElementById("f-name").value = p.name;
+    document.getElementById("f-status").value = p.status;
+    document.getElementById("f-notes").value = p.notes || "";
+    renderCfRows(p.customFields || []);
+    switchView("detail");
+  };
+
+  function renderCfRows(fields){
+    const wrap = document.getElementById("cfRows");
+    wrap.innerHTML = "";
+    fields.forEach((f, i) => {
+      const row = document.createElement("div");
+      row.className = "cf-row";
+      row.innerHTML = '<input class="cf-key" value="'+(f.key||"").replace(/"/g,'&quot;')+'" placeholder="Field name">'+
+                       '<input class="cf-val" value="'+(f.value||"").replace(/"/g,'&quot;')+'" placeholder="Value">'+
+                       '<button class="danger" onclick="removeCfRow('+i+')" type="button">×</button>';
+      wrap.appendChild(row);
+    });
+  }
+  window.addCfRow = function(){
+    const wrap = document.getElementById("cfRows");
+    const fields = readCfRows();
+    fields.push({key:"", value:""});
+    renderCfRows(fields);
+  };
+  window.removeCfRow = function(i){
+    const fields = readCfRows();
+    fields.splice(i,1);
+    renderCfRows(fields);
+  };
+  function readCfRows(){
+    const rows = document.querySelectorAll("#cfRows .cf-row");
+    const out = [];
+    rows.forEach(r => {
+      const k = r.querySelector(".cf-key").value.trim();
+      const v = r.querySelector(".cf-val").value.trim();
+      if(k) out.push({key:k, value:v});
+    });
+    return out;
+  }
+
+  window.saveProject = async function(){
+    const p = projects.find(x => x.id === activeId);
+    p.name = document.getElementById("f-name").value.trim() || p.name;
+    p.status = document.getElementById("f-status").value;
+    p.notes = document.getElementById("f-notes").value;
+    p.customFields = readCfRows();
+    await setDoc(doc(db, "projects", activeId), { name: p.name, status: p.status, notes: p.notes, customFields: p.customFields });
+    await logActivity("Updated \"" + p.name + "\"");
+    const msg = document.getElementById("savedMsg");
+    msg.style.opacity = 1;
+    setTimeout(() => msg.style.opacity = 0, 1200);
+    renderHub();
+  };
+
+  window.deleteProject = async function(){
+    const p = projects.find(x => x.id === activeId);
+    if(!confirm("Delete this project from Firestore?")) return;
+    await deleteDoc(doc(db, "projects", activeId));
+    projects = projects.filter(x => x.id !== activeId);
+    await logActivity("Deleted \"" + (p ? p.name : activeId) + "\"");
+    switchView("hub");
+    renderHub();
+  };
+
+  function applySettings(){
+    document.documentElement.style.setProperty("--accent", userSettings.accent);
+    document.documentElement.setAttribute("data-theme", userSettings.theme);
+  }
+  window.setTheme = async function(t){ userSettings.theme = t; applySettings(); renderSettings(); await persistUserDoc(); };
+  window.setAccent = async function(c){ userSettings.accent = c; applySettings(); renderSettings(); await persistUserDoc(); };
+  function renderSettings(){
+    const sw = document.getElementById("swatches");
+    sw.innerHTML = "";
+    colors.forEach(c => {
+      const el = document.createElement("div");
+      el.className = "swatch" + (c === userSettings.accent ? " active" : "");
+      el.style.background = c;
+      el.onclick = () => setAccent(c);
+      sw.appendChild(el);
+    });
+    document.getElementById("btn-light").classList.toggle("active", userSettings.theme === "light");
+    document.getElementById("btn-dark").classList.toggle("active", userSettings.theme === "dark");
+  }
+
+  function renderActivity(){
+    const al = document.getElementById("activityList");
+    const list = userSettings.activity || [];
+    if(!list.length){ al.innerHTML = '<p class="foot" style="margin:0;">Nothing logged yet.</p>'; return; }
+    al.innerHTML = "";
+    list.forEach(a => { al.innerHTML += '<div class="activity-row"><span class="t">'+a.at+'</span><span>'+a.text+'</span></div>'; });
+  }
+
+  function addMsg(containerId, text, who){
+    const log = document.getElementById(containerId);
+    const row = document.createElement("div");
+    row.className = "msg " + who;
+    row.textContent = text;
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+  }
+  function reply(msg){
+    const m = msg.toLowerCase();
+    if(m.includes("attention")){
+      const stuck = projects.filter(p => p.status === "planning");
+      return stuck.length ? "Still in planning: " + stuck.map(p=>p.name).join(", ") + "." : "Nothing stuck in planning.";
+    }
+    if(m.includes("live") && !m.includes("delive")){
+      const live = projects.filter(p => p.status === "live");
+      return live.length ? live.map(p=>p.name).join(", ") + " are live." : "Nothing is live yet.";
+    }
+    if(m.includes("planning")){
+      const list = projects.filter(p => p.status === "planning");
+      return list.length ? list.map(p=>p.name).join(", ") : "Nothing is in planning.";
+    }
+    const hit = projects.find(p => m.includes(p.name.toLowerCase().split(" ")[0]));
+    if(hit) return hit.name + " is marked '" + hit.status + "'" + (hit.notes ? " — notes: " + hit.notes : "") + ".";
+    return "I can only echo your live board data right now.";
+  }
+  function sendFrom(inputId, logId){
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if(!val) return;
+    addMsg(logId, val, "user");
+    input.value = "";
+    setTimeout(() => addMsg(logId, reply(val), "bot"), 200);
+  }
+
+  function initStaticPanels(){
+    renderSettings();
+    const rl = document.getElementById("repoList");
+    rl.innerHTML = "";
+    repos.forEach(r => { rl.innerHTML += '<div class="list-row"><a href="https://github.com/ReubenElectro/'+r.name+'" target="_blank" rel="noopener">'+r.name+'</a><span class="m">'+r.meta+'</span></div>'; });
+
+    addMsg("log", "Hi, ask me about any project.", "bot");
+    addMsg("jarvisLog", "Jarvis online. Ask about status, or use a quick ask.", "bot");
+    const qa = document.getElementById("quickAsks");
+    quickAsks.forEach(q => {
+      const b = document.createElement("div");
+      b.className = "qbtn";
+      b.textContent = q;
+      b.onclick = () => { document.getElementById("jarvisIn").value = q; sendFrom("jarvisIn","jarvisLog"); };
+      qa.appendChild(b);
+    });
+    document.getElementById("chatSend").addEventListener("click", () => sendFrom("chatIn","log"));
+    document.getElementById("chatIn").addEventListener("keydown", e => { if(e.key === "Enter") sendFrom("chatIn","log"); });
+    document.getElementById("jarvisSend").addEventListener("click", () => sendFrom("jarvisIn","jarvisLog"));
+    document.getElementById("jarvisIn").addEventListener("keydown", e => { if(e.key === "Enter") sendFrom("jarvisIn","jarvisLog"); });
+
+    const notesArea = document.getElementById("notesArea");
+    notesArea.value = userSettings.notes || "";
+    notesArea.addEventListener("input", () => {
+      userSettings.notes = notesArea.value;
+      document.getElementById("notesSaved").textContent = "Saving…";
+      clearTimeout(notesSaveTimer);
+      notesSaveTimer = setTimeout(async () => {
+        await persistUserDoc();
+        document.getElementById("notesSaved").textContent = "Saved to Firestore.";
+      }, 600);
+    });
+  }
+</script>
+
+</body>
+</html>
