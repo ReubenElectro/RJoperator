@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>RJ Ops Portal</title>
+<style>
+  :root{
+    --accent:#1E3A5F;
+    --bg:#F5F4F1; --surface:#FFFFFF; --fill:#ECEBE7; --fill2:#E2E0DA;
+    --line:#DEDCD5; --text:#1C1B19; --muted:#716F68; --radius:12px; --fs:14px;
+  }
+  [data-theme="dark"]{
+    --bg:#171614; --surface:#1F1E1B; --fill:#26251F; --fill2:#302E27;
+    --line:#39372F; --text:#F1EFEA; --muted:#9C998F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:var(--fs);}
+  #login{min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;}
+  #login h1{font-size:13px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; font-weight:600; margin:0;}
+  #login .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:32px 36px; width:300px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,.06);}
+  #login input{width:100%; margin-top:10px; padding:11px 12px; font-size:14px; background:var(--fill); border:1px solid var(--line); border-radius:8px; color:var(--text);}
+  #login button{width:100%; margin-top:12px; padding:11px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; cursor:pointer;}
+  #err{color:#B3423B; font-size:13px; min-height:16px; margin-top:8px;}
+  #app{display:none; min-height:100vh;}
+  .shell{display:flex; min-height:100vh;}
+  .sidebar{width:200px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--line); padding:24px 16px; display:flex; flex-direction:column;}
+  .brand{font-size:15px; font-weight:700; padding:0 8px 20px;}
+  .brand span{display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:2px; word-break:break-all;}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:10px 10px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); margin-bottom:2px;}
+  .nav-item.active, .nav-item:hover{background:var(--fill); color:var(--text);}
+  .nav-dot{width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0;}
+  .nav-group{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:16px 0 6px 10px;}
+  .sidebar-foot{margin-top:auto; font-size:13px; font-weight:600; color:var(--text); cursor:pointer; padding:12px 14px; background:var(--fill); border:1px solid var(--line); border-radius:10px; text-align:center; transition:.15s;}
+  .sidebar-foot:hover{border-color:#B3423B; color:#B3423B; background:var(--fill2);}
+  .main{flex:1; padding:32px 40px; max-width:900px;}
+  .view{display:none;} .view.active{display:block;}
+  .head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px;}
+  .head h2{font-size:22px; margin:0; font-weight:700;}
+  .head p{font-size:13px; color:var(--muted); margin:5px 0 0;}
+  .badge{font-size:11px; padding:5px 10px; border-radius:20px; background:var(--fill2); color:var(--text);}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:24px;}
+  .stat{background:var(--fill); border-radius:var(--radius); padding:14px 16px;}
+  .stat .v{font-size:22px; font-weight:700;} .stat .l{font-size:12px; color:var(--muted); margin-top:2px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px;}
+  .proj{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; cursor:pointer; transition:.15s;}
+  .proj:hover{border-color:var(--accent); transform:translateY(-1px);}
+  .proj .n{font-size:14px; font-weight:700; display:flex; justify-content:space-between; align-items:center;}
+  .proj-link{font-size:12px; color:var(--muted); font-weight:400; padding:2px 5px; border-radius:5px;}
+  .proj-link:hover{color:var(--accent); background:var(--fill);}
+  .proj .s{font-size:11px; color:var(--muted); margin-top:8px; text-transform:capitalize; display:flex; align-items:center; gap:6px;}
+  .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+  .d-planning{background:#B08A3E;} .d-building{background:#3E6FB0;} .d-live{background:#3E8B57;} .d-paused{background:#9A9890;}
+  .add-proj{border:1.5px dashed var(--line); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:600; font-size:13px; cursor:pointer; min-height:78px;}
+  .add-proj:hover{border-color:var(--accent); color:var(--accent);}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px;}
+  .card h3{font-size:14px; margin:0 0 12px; font-weight:700;}
+  .list-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .list-row:last-child{border-bottom:none;}
+  .list-row a{color:var(--text); text-decoration:none; font-weight:600;}
+  .list-row a:hover{color:var(--accent);}
+  .list-row .m{color:var(--muted); font-size:12px;}
+  .list-row.repo-row{cursor:pointer;}
+  .list-row.repo-row:hover{background:var(--fill); border-radius:8px; padding-left:8px; padding-right:8px;}
+  #log, #jarvisLog{display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; margin-bottom:10px;}
+  #jarvisLog{max-height:380px;}
+  .msg{font-size:13px; padding:9px 11px; border-radius:8px; max-width:85%;}
+  .bot{background:var(--fill); align-self:flex-start;} .user{background:var(--accent); color:#fff; align-self:flex-end;}
+  .row{display:flex; gap:8px;}
+  #chatIn, #jarvisIn{flex:1; padding:10px 12px; background:var(--fill); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:13px;}
+  #chatSend, #jarvisSend{padding:10px 16px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; cursor:pointer;}
+  .foot{font-size:12px; color:var(--muted); margin-top:10px;}
+  .quick{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .qbtn{padding:7px 12px; border-radius:20px; background:var(--fill); border:1px solid var(--line); font-size:12px; cursor:pointer; color:var(--text);}
+  .qbtn:hover{border-color:var(--accent);}
+  .pulse-wrap{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+  .pulse{width:10px; height:10px; border-radius:50%; background:#3E8B57; box-shadow:0 0 0 0 rgba(62,139,87,.5); animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,139,87,.5);}70%{box-shadow:0 0 0 8px rgba(62,139,87,0);}100%{box-shadow:0 0 0 0 rgba(62,139,87,0);}}
+  .back{font-size:13px; color:var(--muted); cursor:pointer; margin-bottom:16px; display:inline-block;}
+  .field{margin-bottom:16px; max-width:420px;}
+  .field label{font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;}
+  .field input, .field select, .field textarea{width:100%; padding:11px 12px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit;}
+  .field textarea{min-height:100px; resize:vertical;}
+  .save{padding:10px 18px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;}
+  .saved{font-size:12px; color:#3E8B57; margin-left:10px; opacity:0; transition:opacity .2s;}
+  .swatches{display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap;}
+  .color-picker-trigger{display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--fill); border:1px solid var(--line); border-radius:10px; cursor:pointer; width:fit-content; margin-bottom:4px; color:var(--text); font-size:13px; font-weight:600;}
+  .color-picker-trigger:hover{border-color:var(--accent);}
+  .color-swatch-preview{width:20px; height:20px; border-radius:50%; border:2px solid var(--surface); box-shadow:0 0 0 1px var(--line); margin-left:auto;}
+  .color-hex{font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--muted);}
+  .color-wheel-input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
+  .swatch{width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid transparent;}
+  .swatch.active{border-color:var(--text);}
+  .theme-toggle{display:flex; gap:8px; margin-bottom:24px;}
+  .theme-btn{padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:var(--fill); cursor:pointer; font-size:13px; font-weight:600; color:var(--text);}
+  .theme-btn.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .danger{padding:10px 16px; border-radius:8px; border:1px solid #B3423B; background:transparent; color:#B3423B; font-weight:600; cursor:pointer; font-size:13px;}
+  #notesArea{width:100%; min-height:280px; padding:14px; background:var(--surface); border:1px solid var(--line); border-radius:12px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical;}
+  .cf-row{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;}
+  .cf-row input{flex:1; min-width:140px; padding:9px 11px; background:var(--fill); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:13px; font-family:inherit;}
+  .cf-row input::placeholder{color:var(--muted);}
+  .cf-row .save{flex-shrink:0;}
+  .cf-add{background:var(--fill); border:1px dashed var(--line); border-radius:8px; padding:8px 12px; font-size:12px; cursor:pointer; color:var(--muted);}
+  .activity-row{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .activity-row:last-child{border-bottom:none;}
+  .activity-row .t{color:var(--muted); font-size:11px; white-space:nowrap;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .cal-dow{font-size:10px; text-transform:uppercase; color:var(--muted); text-align:center; padding:4px 0; font-weight:700;}
+  .cal-day{position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px; font-size:13px; cursor:pointer; background:var(--fill); color:var(--text);}
+  .cal-day:hover{background:var(--fill2);}
+  .cal-day.empty{background:transparent; cursor:default;}
+  .cal-day.today{border:1.5px solid var(--accent);}
+  .cal-day.selected{background:var(--accent); color:#fff; font-weight:700;}
+  .cal-day .cal-dot{position:absolute; bottom:4px; width:5px; height:5px; border-radius:50%; background:var(--accent);}
+  .cal-day.selected .cal-dot{background:#fff;}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>RJ Ops Portal</h1>
+  <div class="card">
+    <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">Sign in</div>
+    <input id="email" type="email" placeholder="email">
+    <input id="password" type="password" placeholder="password">
+    <button onclick="doLogin()">Sign in</button>
+    <div id="err"></div>
+  </div>
+</div>
+
+<div id="app">
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand">RJ Ops Portal<span id="userEmail"></span></div>
+    <div class="nav-item active" data-view="hub" onclick="switchView('hub')"><span class="nav-dot"></span>Hub</div>
+    <div class="nav-item" data-view="jarvis" onclick="switchView('jarvis')"><span class="nav-dot"></span>Jarvis</div>
+    <div class="nav-item" data-view="notes" onclick="switchView('notes')"><span class="nav-dot"></span>Notes</div>
+    <div class="nav-item" data-view="activity" onclick="switchView('activity')"><span class="nav-dot"></span>Activity</div>
+    <div class="nav-item" data-view="calendar" onclick="switchView('calendar')"><span class="nav-dot"></span>Calendar</div>
+    <div class="nav-item" data-view="search" onclick="switchView('search')"><span class="nav-dot"></span>Search</div>
+    <div class="nav-item" data-view="calendar" onclick="switchView('calendar')"><span class="nav-dot"></span>Calendar</div>
+    <div class="nav-group">Integrations</div>
+    <div class="nav-item" data-view="github" onclick="switchView('github')"><span class="nav-dot"></span>GitHub</div>
+    <div class="nav-item" onclick="window.open('https://console.firebase.google.com/project/rj-ops-portal','_blank')"><span class="nav-dot"></span>Firebase</div>
+    <div class="nav-item" data-view="links" onclick="switchView('links')"><span class="nav-dot"></span>Links</div>
+    <div class="nav-group">Config</div>
+    <div class="nav-item" data-view="settings" onclick="switchView('settings')"><span class="nav-dot"></span>Settings</div>
+    <div class="nav-item" data-view="account" onclick="switchView('account')"><span class="nav-dot"></span>Account</div>
+    <div class="sidebar-foot" onclick="doLogout()">Sign out</div>
+  </div>
+
+  <div class="main">
+
+    <div id="view-hub" class="view active">
+      <div class="head"><div><h2>Hub</h2><p>Live data from your Firestore project</p></div><span class="badge" id="countBadge"></span></div>
+      <div class="stats" id="stats"></div>
+      <p id="loadingMsg" class="foot">Loading projects…</p>
+      <div class="grid" id="grid"></div>
+      <div class="card">
+        <h3>Quick ask</h3>
+        <div id="log"></div>
+        <div class="row"><input id="chatIn" type="text" placeholder="Ask about a project status"><button id="chatSend">Send</button></div>
+      </div>
+    </div>
+
+    <div id="view-jarvis" class="view">
+      <div class="head"><div><h2>Jarvis</h2><p>Your ops assistant console</p></div></div>
+      <div class="pulse-wrap"><span class="pulse"></span><span style="font-size:13px; color:var(--muted);" id="jarvisModeLabel">Local mode, no external calls</span></div>
+      <div class="card" id="llmEnableCard">
+        <h3>Real AI, running on your device</h3>
+        <p class="foot" style="margin-top:0;">Downloads Phi-3.5 Mini (~2GB) once, then runs fully offline in your browser — no API, no server, no bill. First load takes a minute or two.</p>
+        <button class="save" onclick="enableRealAI()" id="enableAiBtn">Enable real AI</button>
+        <div id="llmProgress" style="display:none; margin-top:12px;">
+          <div style="height:8px; background:var(--fill2); border-radius:4px; overflow:hidden;"><div id="llmProgressBar" style="height:100%; width:0%; background:var(--accent);"></div></div>
+          <p class="foot" id="llmProgressText">Starting…</p>
+        </div>
+      </div>
+      <div class="quick" id="quickAsks"></div>
+      <div class="card" style="margin-bottom:0;">
+        <div id="jarvisLog"></div>
+        <div class="row" style="margin-top:12px;"><input id="jarvisIn" type="text" placeholder="Ask Jarvis about your projects"><button id="jarvisSend">Send</button></div>
+        <div class="foot">Keyword matching against your live Firestore data.</div>
+      </div>
+    </div>
+
+    <div id="view-notes" class="view">
+      <div class="head"><div><h2>Notes</h2><p>Synced to your account, not just this browser</p></div></div>
+      <textarea id="notesArea" placeholder="Jot anything down…"></textarea>
+      <p class="foot" id="notesSaved">Saves automatically to Firestore.</p>
+    </div>
+
+    <div id="view-activity" class="view">
+      <div class="head"><div><h2>Activity</h2><p>What's changed, synced to your account</p></div></div>
+      <div class="card"><div id="activityList"></div></div>
+    </div>
+
+    <div id="view-calendar" class="view">
+      <div class="head"><div><h2>Calendar</h2><p>Click a day to see what's due</p></div></div>
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <button class="theme-btn" onclick="shiftMonth(-1)" type="button">&larr;</button>
+          <div id="calMonthLabel" style="font-weight:700; font-size:14px;"></div>
+          <button class="theme-btn" onclick="shiftMonth(1)" type="button">&rarr;</button>
+        </div>
+        <div id="calGrid" class="cal-grid"></div>
+      </div>
+      <div class="card">
+        <h3 id="calDayHeading">Select a day</h3>
+        <div id="calDayList"></div>
+        <div id="calNoteWrap" style="display:none; margin-top:12px;">
+          <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px; font-weight:700; text-transform:uppercase;">Note for this day</label>
+          <textarea id="calNoteArea" placeholder="Type anything for this day…" style="width:100%; min-height:90px; padding:11px 12px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit; resize:vertical;"></textarea>
+          <p class="foot" id="calNoteSaved" style="margin-top:6px;"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-search" class="view">
+      <div class="head"><div><h2>Search</h2><p>Find anything across your projects</p></div></div>
+      <input id="searchInput" type="text" placeholder="Search names, statuses, notes, custom fields…" style="width:100%; max-width:500px; padding:11px 12px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:14px; margin-bottom:16px;">
+      <div id="searchResults"></div>
+    </div>
+
+    <div id="view-links" class="view">
+      <div class="head"><div><h2>Links</h2><p>Your quick launchers — add, edit, or remove any of these</p></div></div>
+      <div class="card">
+        <div id="linksList"></div>
+        <div class="cf-row" style="margin-top:12px;">
+          <input id="newLinkName" placeholder="Name (e.g. Instagram)">
+          <input id="newLinkUrl" placeholder="https://...">
+          <button class="save" onclick="addLink()" type="button">Add</button>
+        </div>
+      </div>
+      <p class="foot">These open external sites in a new tab. A browser can't open your PC's actual file folders — for that, link to a cloud folder (Google Drive, Dropbox) instead.</p>
+    </div>
+
+    <div id="view-github" class="view">
+      <div class="head"><div><h2>GitHub</h2><p>Your real repos — read-only for now</p></div><span class="badge" style="cursor:pointer;" onclick="window.open('https://github.com/ReubenElectro','_blank')">Open on GitHub ↗</span></div>
+      <div class="card"><h3>Repositories</h3><div id="repoList"></div></div>
+      <p class="foot">Write access (creating issues, pushing commits from here) needs the Claude GitHub connector's write permission enabled — still pending from earlier.</p>
+    </div>
+
+    <div id="view-detail" class="view">
+      <span class="back" onclick="switchView('hub')">&larr; back to hub</span>
+      <div class="field"><label>Project name</label><input id="f-name"></div>
+      <div class="field"><label>Status</label>
+        <select id="f-status">
+          <option value="planning">Planning</option><option value="building">Building</option>
+          <option value="live">Live</option><option value="paused">Paused</option>
+        </select>
+      </div>
+      <div class="field"><label>Due date</label><input id="f-due" type="date"></div>
+      <div class="field"><label>Notes</label><textarea id="f-notes"></textarea></div>
+      <div class="field">
+        <label>Custom fields</label>
+        <div id="cfRows"></div>
+        <div class="cf-add" onclick="addCfRow()">+ Add custom field</div>
+      </div>
+      <button class="save" onclick="saveProject()">Save to Firestore</button>
+      <button class="danger" onclick="deleteProject()" style="margin-left:8px;">Delete</button>
+      <span class="saved" id="savedMsg">Saved</span>
+    </div>
+
+    <div id="view-account" class="view">
+      <div class="head"><div><h2>Account</h2><p>Manage your sign-in</p></div></div>
+      <div class="field"><label>Signed in as</label><input id="accEmail" disabled></div>
+      <div class="field"><label>New password</label><input id="accNewPw" type="password" placeholder="At least 6 characters"></div>
+      <button class="save" onclick="changePassword()">Update password</button>
+      <p class="foot" id="accPwMsg"></p>
+      <div class="field" style="margin-top:28px;"><label>Danger zone</label></div>
+      <button class="danger" onclick="deleteAccount()">Delete my account</button>
+      <p class="foot">This removes your login only — your projects stay in Firestore and can be reassigned to a new account later if needed.</p>
+      <div class="field" style="margin-top:28px;"><label>Keyboard shortcuts</label></div>
+      <p class="foot" style="margin:0;">/ search · n new project · h hub · j jarvis · c calendar</p>
+    </div>
+
+    <div id="view-settings" class="view">
+      <div class="head"><div><h2>Settings</h2><p>Synced to your account, follows you everywhere</p></div></div>
+      <div class="field"><label>Accent color</label></div>
+      <div class="color-picker-trigger" id="colorTrigger">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 114.03 4.03l-8.06 8.07"/><path d="M7.07 14.94a5.28 5.28 0 00-1.9-1.2c-1.62-.5-1.4-2.6-.6-3.4a5.34 5.34 0 013.4-.6c.5.1 1 .3 1.4.6.4.3.7.7 1 1.2.3.5.5 1.1.5 1.7 0 1.9-1.5 3.4-3.4 3.4a3.36 3.36 0 01-.4-1.7z"/></svg>
+        <span>Pick a color</span>
+        <span class="color-swatch-preview" id="colorPreview"></span>
+        <span class="color-hex" id="colorHex"></span>
+      </div>
+      <input type="color" id="colorWheel" class="color-wheel-input">
+      <div class="swatches" id="swatches" style="margin-top:12px;"></div>
+      <div class="field"><label>Theme</label></div>
+      <div class="theme-toggle">
+        <button class="theme-btn" id="btn-light" onclick="setTheme('light')">Light</button>
+        <button class="theme-btn" id="btn-dark" onclick="setTheme('dark')">Dark</button>
+      </div>
+      <div class="field"><label>Font</label></div>
+      <div class="theme-toggle" id="fontRow"></div>
+      <div class="field"><label>Brightness</label></div>
+      <input id="brightnessRange" type="range" min="80" max="120" value="100" style="width:100%; max-width:420px;">
+      <div class="field"><label>Default view on sign-in</label></div>
+      <div class="theme-toggle" id="defaultViewRow"></div>
+      <div class="field" style="margin-top:24px;"><label>Data</label></div>
+      <button class="save" onclick="seedProjects()">Seed sample projects into Firestore</button>
+      <button class="danger" onclick="removeDuplicates()" style="margin-left:8px;">Remove duplicate projects</button>
+      <button class="danger" onclick="resetToOneEach()" style="margin-left:8px;">Wipe all &amp; add one of each</button>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAqRnISdxfOoyGWXYX2RHyvfNYO1hhCY_0",
+    authDomain: "rj-ops-portal.firebaseapp.com",
+    projectId: "rj-ops-portal",
+    storageBucket: "rj-ops-portal.firebasestorage.app",
+    messagingSenderId: "422887869537",
+    appId: "1:422887869537:web:60998bbcc5eaa436042e20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  function shadesOf(hex){
+    const h = hex.replace("#","");
+    const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+    const mix = (c, target, amt) => Math.round(c + (target - c) * amt);
+    const toHex = (r,g,b) => "#" + [r,g,b].map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,"0")).join("");
+    const steps = [-0.55,-0.35,-0.15,0,0.2,0.4,0.6];
+    return steps.map(amt => amt < 0
+      ? toHex(mix(r,0,-amt), mix(g,0,-amt), mix(b,0,-amt))
+      : toHex(mix(r,255,amt), mix(g,255,amt), mix(b,255,amt))
+    );
+  }
+  const fonts = [
+    {key:"system", label:"System", css:"-apple-system,Segoe UI,Roboto,Arial,sans-serif"},
+    {key:"serif", label:"Serif", css:"Georgia,'Times New Roman',serif"},
+    {key:"mono", label:"Mono", css:"ui-monospace,Consolas,monospace"},
+    {key:"rounded", label:"Rounded", css:"'Trebuchet MS',Verdana,sans-serif"}
+  ];
+  const repos = [
+    {name:"RJoperator", meta:"HTML · this repo"},
+    {name:"family-health-apps", meta:"JavaScript"},
+    {name:"chasetown-saints", meta:"HTML"},
+    {name:"matchup", meta:"HTML · \"footie results\""},
+    {name:"electro-fut", meta:""}
+  ];
+  const repoMap = {
+    "chasetown saints": "chasetown-saints",
+    "fc26 companion": "electro-fut",
+    "fotmob clone": "matchup"
+  };
+  const seedDefaults = [
+    {name:"Chasetown Saints", status:"planning", notes:"", customFields:[]},
+    {name:"FC26 companion", status:"planning", notes:"", customFields:[]},
+    {name:"FitCore fitness", status:"planning", notes:"", customFields:[]},
+    {name:"FotMob clone", status:"planning", notes:"", customFields:[]},
+    {name:"Shoplet", status:"planning", notes:"", customFields:[]}
+  ];
+  const defaultLinks = [
+    {name:"Gmail", url:"https://mail.google.com"},
+    {name:"WhatsApp Web", url:"https://web.whatsapp.com"},
+    {name:"Firebase console", url:"https://console.firebase.google.com/project/rj-ops-portal"},
+    {name:"GitHub profile", url:"https://github.com/ReubenElectro"},
+    {name:"YouTube", url:"https://youtube.com"},
+    {name:"TikTok", url:"https://tiktok.com"},
+    {name:"Instagram", url:"https://instagram.com"},
+    {name:"Google Drive", url:"https://drive.google.com"}
+  ];
+  const quickAsks = ["What's live right now?","What needs attention?","List everything planning"];
+
+  let projects = [];
+  let activeId = null;
+  let uid = null;
+  let userSettings = {accent:"#1E3A5F", theme:"dark", notes:"", activity:[], font:"system", brightness:100, focus:false, links:null, calendarNotes:{}, defaultView:"hub"};
+  let notesSaveTimer = null;
+
+  window.changePassword = async function(){
+    const pw = document.getElementById("accNewPw").value;
+    const msg = document.getElementById("accPwMsg");
+    if(pw.length < 6){ msg.textContent = "Password needs at least 6 characters."; return; }
+    try{
+      await updatePassword(auth.currentUser, pw);
+      msg.textContent = "Password updated.";
+      document.getElementById("accNewPw").value = "";
+    }catch(e){
+      if(e.code === "auth/requires-recent-login"){
+        msg.textContent = "For security, sign out and sign back in, then try again immediately.";
+      } else {
+        msg.textContent = e.message;
+      }
+    }
+  };
+  window.deleteAccount = async function(){
+    if(!confirm("Delete your login? You'll need to be re-added as a user in Firebase console to sign in again.")) return;
+    try{
+      await deleteUser(auth.currentUser);
+    }catch(e){
+      if(e.code === "auth/requires-recent-login"){
+        alert("For security, sign out and sign back in, then try again immediately.");
+      } else {
+        alert(e.message);
+      }
+    }
+  };
+
+  document.addEventListener("keydown", e => {
+    const tag = (document.activeElement && document.activeElement.tagName) || "";
+    if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if(document.getElementById("app").style.display !== "block") return;
+    if(e.key === "/"){ e.preventDefault(); switchView("search"); document.getElementById("searchInput").focus(); }
+    if(e.key === "n"){ e.preventDefault(); addProject(); }
+    if(e.key === "h"){ switchView("hub"); }
+    if(e.key === "j"){ switchView("jarvis"); }
+    if(e.key === "c"){ switchView("calendar"); }
+  });
+
+  let llmEngine = null;
+  let llmReady = false;
+
+  window.enableRealAI = async function(){
+    if(!("gpu" in navigator)){
+      alert("Your browser doesn't support WebGPU, so a real local model can't run here. Try latest Chrome or Edge on a desktop.");
+      return;
+    }
+    document.getElementById("enableAiBtn").disabled = true;
+    document.getElementById("llmProgress").style.display = "block";
+    try{
+      llmEngine = await webllm.CreateMLCEngine("Phi-3.5-mini-instruct-q4f16_1-MLC", {
+        initProgressCallback: (p) => {
+          document.getElementById("llmProgressBar").style.width = Math.round((p.progress||0)*100) + "%";
+          document.getElementById("llmProgressText").textContent = p.text || "Loading…";
+        }
+      });
+      llmReady = true;
+      document.getElementById("llmEnableCard").style.display = "none";
+      document.getElementById("jarvisModeLabel").textContent = "Real AI (Phi-3.5 Mini) — running on your device";
+      addMsg("jarvisLog", "Real AI is online. I can now actually reason about your projects, not just match keywords.", "bot");
+    }catch(e){
+      document.getElementById("llmProgressText").textContent = "Failed to load: " + e.message;
+      document.getElementById("enableAiBtn").disabled = false;
+    }
+  };
+
+  async function llmReply(userMsg){
+    const now = new Date();
+    const context = projects.map(p => "- " + p.name + " (status: " + p.status + (p.due ? ", due: "+p.due : "") + (p.notes ? ", notes: "+p.notes : "") + ")").join("\n") || "No projects on the board yet.";
+    const messages = [
+      { role: "system", content: "You are Jarvis, a concise ops assistant for a personal project dashboard called RJ Ops Portal. The current date and time right now is " + now.toString() + ". Here is the current project board:\n" + context + "\nAnswer briefly and directly based on this data. If asked something unrelated to the projects, answer normally but stay concise." },
+      { role: "user", content: userMsg }
+    ];
+    const reply = await llmEngine.chat.completions.create({ messages, temperature: 0.6 });
+    return reply.choices[0].message.content;
+  }
+
+  window.doLogin = function(){
+    const email = document.getElementById("email").value.trim();
+    const pw = document.getElementById("password").value;
+    signInWithEmailAndPassword(auth, email, pw).catch(err => { document.getElementById("err").textContent = err.message; });
+  };
+  window.doLogout = function(){ signOut(auth); };
+
+  onAuthStateChanged(auth, async user => {
+    if(user){
+      uid = user.uid;
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      document.getElementById("userEmail").textContent = user.email;
+      document.getElementById("accEmail").value = user.email;
+      initStaticPanels();
+      try{ await loadUserDoc(); switchView(userSettings.defaultView || "hub"); }catch(e){ console.error("loadUserDoc failed", e); }
+      try{ await loadProjects(); }catch(e){ console.error("loadProjects failed", e); }
+    } else {
+      document.getElementById("app").style.display = "none";
+      document.getElementById("login").style.display = "flex";
+    }
+  });
+
+  async function loadUserDoc(){
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    if(snap.exists()){
+      userSettings = { accent:"#1E3A5F", theme:"dark", notes:"", activity:[], font:"system", brightness:100, focus:false, links:null, calendarNotes:{}, defaultView:"hub", ...snap.data() };
+      if(!userSettings.links) userSettings.links = defaultLinks;
+    } else {
+      userSettings.links = defaultLinks;
+      await setDoc(ref, userSettings);
+    }
+    applySettings();
+  }
+  async function persistUserDoc(){
+    await setDoc(doc(db, "users", uid), userSettings);
+  }
+  async function logActivity(text){
+    userSettings.activity = [{text, at: new Date().toLocaleString()}, ...(userSettings.activity||[])].slice(0,30);
+    await persistUserDoc();
+    if(document.getElementById("view-activity").classList.contains("active")) renderActivity();
+  }
+
+  async function loadProjects(){
+    document.getElementById("loadingMsg").style.display = "block";
+    try{
+      const snap = await getDocs(collection(db, "projects"));
+      projects = [];
+      snap.forEach(d => projects.push({ id: d.id, customFields:[], ...d.data() }));
+    }catch(e){
+      document.getElementById("loadingMsg").textContent = "Couldn't load projects: " + e.message;
+      return;
+    }
+    document.getElementById("loadingMsg").style.display = "none";
+    renderHub();
+    if(document.getElementById("calGrid")) renderCalendar();
+  }
+
+  window.resetToOneEach = async function(){
+    if(!confirm("This deletes ALL " + projects.length + " current projects and replaces them with exactly one of each default. Continue?")) return;
+    for(const p of projects){ await deleteDoc(doc(db, "projects", p.id)); }
+    for(const p of seedDefaults){ await addDoc(collection(db, "projects"), p); }
+    await logActivity("Wiped all projects and reset to one of each default");
+    await loadProjects();
+    switchView("hub");
+  };
+
+  window.removeDuplicates = async function(){
+    const seen = new Set();
+    const toDelete = [];
+    projects.forEach(p => {
+      const key = p.name.trim().toLowerCase();
+      if(seen.has(key)) toDelete.push(p);
+      else seen.add(key);
+    });
+    if(!toDelete.length){
+      alert("No duplicates found.");
+      return;
+    }
+    if(!confirm("Delete " + toDelete.length + " duplicate project(s), keeping one of each name?")) return;
+    for(const p of toDelete){ await deleteDoc(doc(db, "projects", p.id)); }
+    await logActivity("Removed " + toDelete.length + " duplicate project(s)");
+    await loadProjects();
+  };
+
+  window.seedProjects = async function(){
+    const existingNames = projects.map(p => p.name.toLowerCase());
+    const toAdd = seedDefaults.filter(p => !existingNames.includes(p.name.toLowerCase()));
+    if(!toAdd.length){
+      alert("All sample projects already exist — nothing added.");
+      return;
+    }
+    for(const p of toAdd){ await addDoc(collection(db, "projects"), p); }
+    await logActivity("Seeded " + toAdd.length + " sample project(s)");
+    await loadProjects();
+    switchView("hub");
+  };
+
+  window.switchView = function(name){
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-"+name).classList.add("active");
+    document.querySelectorAll(".nav-item[data-view]").forEach(n => n.classList.toggle("active", n.dataset.view === name));
+    if(name === "activity") renderActivity();
+  };
+
+  function renderHub(){
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    projects.forEach(p => {
+      const d = document.createElement("div");
+      d.className = "proj";
+      d.onclick = () => showDetail(p.id);
+      const repo = repoMap[p.name.toLowerCase()];
+      const linkHtml = repo ? '<span class="proj-link" onclick="event.stopPropagation(); window.open(\'https://github.com/ReubenElectro/'+repo+'\',\'_blank\')" title="Open '+repo+' on GitHub">↗</span>' : "";
+      d.innerHTML = '<div class="n">'+p.name+linkHtml+'</div><div class="s"><span class="dot d-'+p.status+'"></span>'+p.status+'</div>';
+      grid.appendChild(d);
+    });
+    const addCard = document.createElement("div");
+    addCard.className = "add-proj";
+    addCard.textContent = "+ Add project";
+    addCard.onclick = addProject;
+    grid.appendChild(addCard);
+    document.getElementById("countBadge").textContent = projects.length + " projects";
+    const counts = {};
+    projects.forEach(p => counts[p.status] = (counts[p.status]||0)+1);
+    const stats = document.getElementById("stats");
+    stats.innerHTML = "";
+    ["planning","building","live","paused"].forEach(s => {
+      const el = document.createElement("div");
+      el.className = "stat";
+      el.innerHTML = '<div class="v">'+(counts[s]||0)+'</div><div class="l">'+s+'</div>';
+      stats.appendChild(el);
+    });
+  }
+
+  window.addProject = async function(){
+    const name = prompt("New project name:");
+    if(!name || !name.trim()) return;
+    const data = { name: name.trim(), status: "planning", notes: "", customFields: [] };
+    const ref = await addDoc(collection(db, "projects"), data);
+    projects.push({ id: ref.id, ...data });
+    await logActivity("Added project \"" + name.trim() + "\"");
+    renderHub();
+  };
+
+  window.showDetail = function(id){
+    activeId = id;
+    const p = projects.find(x => x.id === id);
+    document.getElementById("f-name").value = p.name;
+    document.getElementById("f-status").value = p.status;
+    document.getElementById("f-due").value = p.due || "";
+    document.getElementById("f-notes").value = p.notes || "";
+    renderCfRows(p.customFields || []);
+    switchView("detail");
+  };
+
+  function renderCfRows(fields){
+    const wrap = document.getElementById("cfRows");
+    wrap.innerHTML = "";
+    fields.forEach((f, i) => {
+      const row = document.createElement("div");
+      row.className = "cf-row";
+      row.innerHTML = '<input class="cf-key" value="'+(f.key||"").replace(/"/g,'&quot;')+'" placeholder="Field name">'+
+                       '<input class="cf-val" value="'+(f.value||"").replace(/"/g,'&quot;')+'" placeholder="Value">'+
+                       '<button class="danger" onclick="removeCfRow('+i+')" type="button">×</button>';
+      wrap.appendChild(row);
+    });
+  }
+  window.addCfRow = function(){
+    const wrap = document.getElementById("cfRows");
+    const fields = readCfRows();
+    fields.push({key:"", value:""});
+    renderCfRows(fields);
+  };
+  window.removeCfRow = function(i){
+    const fields = readCfRows();
+    fields.splice(i,1);
+    renderCfRows(fields);
+  };
+  function readCfRows(){
+    const rows = document.querySelectorAll("#cfRows .cf-row");
+    const out = [];
+    rows.forEach(r => {
+      const k = r.querySelector(".cf-key").value.trim();
+      const v = r.querySelector(".cf-val").value.trim();
+      if(k) out.push({key:k, value:v});
+    });
+    return out;
+  }
+
+  window.saveProject = async function(){
+    const p = projects.find(x => x.id === activeId);
+    p.name = document.getElementById("f-name").value.trim() || p.name;
+    p.status = document.getElementById("f-status").value;
+    p.due = document.getElementById("f-due").value;
+    p.notes = document.getElementById("f-notes").value;
+    p.customFields = readCfRows();
+    await setDoc(doc(db, "projects", activeId), { name: p.name, status: p.status, due: p.due, notes: p.notes, customFields: p.customFields });
+    await logActivity("Updated \"" + p.name + "\"");
+    const msg = document.getElementById("savedMsg");
+    msg.style.opacity = 1;
+    setTimeout(() => msg.style.opacity = 0, 1200);
+    renderHub();
+  };
+
+  window.deleteProject = async function(){
+    const p = projects.find(x => x.id === activeId);
+    if(!confirm("Delete this project from Firestore?")) return;
+    await deleteDoc(doc(db, "projects", activeId));
+    projects = projects.filter(x => x.id !== activeId);
+    await logActivity("Deleted \"" + (p ? p.name : activeId) + "\"");
+    switchView("hub");
+    renderHub();
+  };
+
+  function applySettings(){
+    document.documentElement.style.setProperty("--accent", userSettings.accent);
+    document.documentElement.setAttribute("data-theme", userSettings.theme);
+    const f = fonts.find(x => x.key === (userSettings.font||"system")) || fonts[0];
+    document.body.style.fontFamily = f.css;
+    document.getElementById("app").style.filter = "brightness(" + ((userSettings.brightness||100)/100) + ")";
+    const br = document.getElementById("brightnessRange");
+    if(br) br.style.accentColor = userSettings.accent;
+  }
+  window.setTheme = async function(t){ userSettings.theme = t; applySettings(); renderSettings(); await persistUserDoc(); };
+  window.setAccent = async function(c){ userSettings.accent = c; applySettings(); renderSettings(); await persistUserDoc(); };
+  window.setFont = async function(k){ userSettings.font = k; applySettings(); renderSettings(); await persistUserDoc(); };
+  window.setBrightness = async function(v){ userSettings.brightness = v; applySettings(); await persistUserDoc(); };
+  function renderSettings(){
+    document.getElementById("colorPreview").style.background = userSettings.accent;
+    document.getElementById("colorHex").textContent = userSettings.accent.toUpperCase();
+    document.getElementById("colorWheel").value = userSettings.accent;
+
+    const sw = document.getElementById("swatches");
+    sw.innerHTML = "";
+    shadesOf(userSettings.accent).forEach(c => {
+      const el = document.createElement("div");
+      el.className = "swatch" + (c.toLowerCase() === userSettings.accent.toLowerCase() ? " active" : "");
+      el.style.background = c;
+      el.title = c;
+      el.onclick = () => setAccent(c);
+      sw.appendChild(el);
+    });
+
+    document.getElementById("btn-light").classList.toggle("active", userSettings.theme === "light");
+    document.getElementById("btn-dark").classList.toggle("active", userSettings.theme === "dark");
+
+    const fr = document.getElementById("fontRow");
+    fr.innerHTML = "";
+    fonts.forEach(f => {
+      const b = document.createElement("button");
+      b.className = "theme-btn" + ((userSettings.font||"system") === f.key ? " active" : "");
+      b.textContent = f.label;
+      b.onclick = () => setFont(f.key);
+      fr.appendChild(b);
+    });
+
+    const br = document.getElementById("brightnessRange");
+    br.value = userSettings.brightness || 100;
+    br.style.accentColor = userSettings.accent;
+
+    const dv = document.getElementById("defaultViewRow");
+    dv.innerHTML = "";
+    [["hub","Hub"],["jarvis","Jarvis"],["calendar","Calendar"],["notes","Notes"]].forEach(([key,label]) => {
+      const b = document.createElement("button");
+      b.className = "theme-btn" + ((userSettings.defaultView||"hub") === key ? " active" : "");
+      b.textContent = label;
+      b.onclick = () => setDefaultView(key);
+      dv.appendChild(b);
+    });
+  }
+  window.setDefaultView = async function(key){
+    userSettings.defaultView = key;
+    renderSettings();
+    await persistUserDoc();
+  };
+
+  function renderActivity(){
+    const al = document.getElementById("activityList");
+    const list = userSettings.activity || [];
+    if(!list.length){ al.innerHTML = '<p class="foot" style="margin:0;">Nothing logged yet.</p>'; return; }
+    al.innerHTML = "";
+    list.forEach(a => { al.innerHTML += '<div class="activity-row"><span class="t">'+a.at+'</span><span>'+a.text+'</span></div>'; });
+  }
+
+  function renderLinks(){
+    const ll = document.getElementById("linksList");
+    ll.innerHTML = "";
+    (userSettings.links || defaultLinks).forEach((l, i) => {
+      const row = document.createElement("div");
+      row.className = "list-row";
+      row.innerHTML = '<span class="repo-row" style="flex:1; cursor:pointer;" onclick="window.open(\''+l.url+'\',\'_blank\')">'+l.name+' ↗</span>'+
+                       '<button class="danger" onclick="removeLink('+i+')" type="button" style="padding:4px 10px;">×</button>';
+      ll.appendChild(row);
+    });
+  }
+  window.addLink = async function(){
+    const name = document.getElementById("newLinkName").value.trim();
+    let url = document.getElementById("newLinkUrl").value.trim();
+    if(!name || !url) return;
+    if(!/^https?:\/\//i.test(url)) url = "https://" + url;
+    userSettings.links = (userSettings.links || defaultLinks).concat([{name, url}]);
+    document.getElementById("newLinkName").value = "";
+    document.getElementById("newLinkUrl").value = "";
+    renderLinks();
+    await persistUserDoc();
+  };
+  window.removeLink = async function(i){
+    userSettings.links = (userSettings.links || defaultLinks).filter((_,idx) => idx !== i);
+    renderLinks();
+    await persistUserDoc();
+  };
+
+  let calCursor = new Date();
+  let calSelected = null;
+
+  window.shiftMonth = function(dir){
+    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + dir, 1);
+    renderCalendar();
+  };
+
+  function renderCalendar(){
+    const grid = document.getElementById("calGrid");
+    const label = document.getElementById("calMonthLabel");
+    const year = calCursor.getFullYear();
+    const month = calCursor.getMonth();
+    label.textContent = calCursor.toLocaleString(undefined, { month: "long", year: "numeric" });
+
+    const dueMap = {};
+    projects.forEach(p => { if(p.due) (dueMap[p.due] = dueMap[p.due] || []).push(p); });
+
+    grid.innerHTML = "";
+    ["S","M","T","W","T","F","S"].forEach(d => {
+      const el = document.createElement("div");
+      el.className = "cal-dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().slice(0,10);
+
+    for(let i = 0; i < firstDow; i++){
+      const el = document.createElement("div");
+      el.className = "cal-day empty";
+      grid.appendChild(el);
+    }
+    for(let day = 1; day <= daysInMonth; day++){
+      const dateStr = year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+      const el = document.createElement("div");
+      el.className = "cal-day" + (dateStr === todayStr ? " today" : "") + (dateStr === calSelected ? " selected" : "");
+      el.textContent = day;
+      if(dueMap[dateStr]) el.innerHTML += '<span class="cal-dot"></span>';
+      el.onclick = () => {
+        calSelected = (calSelected === dateStr) ? null : dateStr;
+        renderCalendar();
+        if(calSelected){ renderCalDay(dueMap[calSelected] || [], calSelected); showCalNote(calSelected); }
+        else { document.getElementById("calDayHeading").textContent = "Select a day"; document.getElementById("calDayList").innerHTML = ""; document.getElementById("calNoteWrap").style.display = "none"; }
+      };
+      grid.appendChild(el);
+    }
+
+    if(calSelected){ renderCalDay(dueMap[calSelected] || [], calSelected); showCalNote(calSelected); }
+  }
+
+  function renderCalDay(list, dateStr){
+    document.getElementById("calDayHeading").textContent = new Date(dateStr + "T00:00").toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
+    const box = document.getElementById("calDayList");
+    if(!list.length){ box.innerHTML = '<p class="foot" style="margin:0;">Nothing due this day.</p>'; return; }
+    box.innerHTML = "";
+    list.forEach(p => {
+      const row = document.createElement("div");
+      row.className = "proj";
+      row.style.cursor = "pointer";
+      row.onclick = () => showDetail(p.id);
+      row.innerHTML = '<div class="n">'+p.name+'</div><div class="s"><span class="dot d-'+p.status+'"></span>'+p.status+'</div>';
+      box.appendChild(row);
+    });
+  }
+
+  let calNoteSaveTimer = null;
+  function showCalNote(dateStr){
+    const wrap = document.getElementById("calNoteWrap");
+    const area = document.getElementById("calNoteArea");
+    wrap.style.display = "block";
+    area.value = (userSettings.calendarNotes || {})[dateStr] || "";
+    document.getElementById("calNoteSaved").textContent = "";
+    area.oninput = () => {
+      if(!userSettings.calendarNotes) userSettings.calendarNotes = {};
+      userSettings.calendarNotes[dateStr] = area.value;
+      document.getElementById("calNoteSaved").textContent = "Saving…";
+      clearTimeout(calNoteSaveTimer);
+      calNoteSaveTimer = setTimeout(async () => {
+        await persistUserDoc();
+        document.getElementById("calNoteSaved").textContent = "Saved.";
+      }, 600);
+    };
+  }
+
+  function runSearch(q){
+    const box = document.getElementById("searchResults");
+    const term = q.trim().toLowerCase();
+    if(!term){ box.innerHTML = ""; return; }
+    const hits = projects.filter(p => {
+      const cf = (p.customFields||[]).map(f => f.key+" "+f.value).join(" ");
+      return (p.name+" "+p.status+" "+(p.notes||"")+" "+cf).toLowerCase().includes(term);
+    });
+    if(!hits.length){ box.innerHTML = '<p class="foot">No matches.</p>'; return; }
+    box.innerHTML = "";
+    hits.forEach(p => {
+      const row = document.createElement("div");
+      row.className = "proj";
+      row.style.cursor = "pointer";
+      row.onclick = () => { showDetail(p.id); };
+      row.innerHTML = '<div class="n">'+p.name+'</div><div class="s"><span class="dot d-'+p.status+'"></span>'+p.status+'</div>';
+      box.appendChild(row);
+    });
+  }
+
+  function addMsg(containerId, text, who){
+    const log = document.getElementById(containerId);
+    const row = document.createElement("div");
+    row.className = "msg " + who;
+    row.textContent = text;
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+  }
+  function reply(msg){
+    const m = msg.toLowerCase();
+    if(m.includes("attention")){
+      const stuck = projects.filter(p => p.status === "planning");
+      return stuck.length ? "Still in planning: " + stuck.map(p=>p.name).join(", ") + "." : "Nothing stuck in planning.";
+    }
+    if(m.includes("live") && !m.includes("delive")){
+      const live = projects.filter(p => p.status === "live");
+      return live.length ? live.map(p=>p.name).join(", ") + " are live." : "Nothing is live yet.";
+    }
+    if(m.includes("planning")){
+      const list = projects.filter(p => p.status === "planning");
+      return list.length ? list.map(p=>p.name).join(", ") : "Nothing is in planning.";
+    }
+    const hit = projects.find(p => m.includes(p.name.toLowerCase().split(" ")[0]));
+    if(hit) return hit.name + " is marked '" + hit.status + "'" + (hit.notes ? " — notes: " + hit.notes : "") + ".";
+    return "I can only echo your live board data right now.";
+  }
+  async function sendFrom(inputId, logId){
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if(!val) return;
+    addMsg(logId, val, "user");
+    input.value = "";
+    if(logId === "jarvisLog" && llmReady){
+      addMsg(logId, "…thinking", "bot");
+      const thinkingEl = document.getElementById(logId).lastChild;
+      try{
+        const answer = await llmReply(val);
+        thinkingEl.textContent = answer;
+      }catch(e){
+        thinkingEl.textContent = "Local model error: " + e.message;
+      }
+      return;
+    }
+    setTimeout(() => addMsg(logId, reply(val), "bot"), 200);
+  }
+
+  function initStaticPanels(){
+    renderSettings();
+    document.getElementById("colorTrigger").addEventListener("click", () => document.getElementById("colorWheel").click());
+    document.getElementById("colorWheel").addEventListener("input", e => setAccent(e.target.value));
+    document.getElementById("brightnessRange").addEventListener("input", e => setBrightness(Number(e.target.value)));
+    const rl = document.getElementById("repoList");
+    rl.innerHTML = "";
+    repos.forEach(r => { rl.innerHTML += '<div class="list-row repo-row" onclick="window.open(\'https://github.com/ReubenElectro/'+r.name+'\',\'_blank\')"><span>'+r.name+'</span><span class="m">'+r.meta+' ↗</span></div>'; });
+
+    addMsg("log", "Hi, ask me about any project.", "bot");
+    addMsg("jarvisLog", "Jarvis online. Ask about status, or use a quick ask.", "bot");
+    const qa = document.getElementById("quickAsks");
+    quickAsks.forEach(q => {
+      const b = document.createElement("div");
+      b.className = "qbtn";
+      b.textContent = q;
+      b.onclick = () => { document.getElementById("jarvisIn").value = q; sendFrom("jarvisIn","jarvisLog"); };
+      qa.appendChild(b);
+    });
+    renderLinks();
+    renderCalendar();
+
+    document.getElementById("searchInput").addEventListener("input", e => runSearch(e.target.value));
+
+    document.getElementById("chatSend").addEventListener("click", () => sendFrom("chatIn","log"));
+    document.getElementById("chatIn").addEventListener("keydown", e => { if(e.key === "Enter") sendFrom("chatIn","log"); });
+    document.getElementById("jarvisSend").addEventListener("click", () => sendFrom("jarvisIn","jarvisLog"));
+    document.getElementById("jarvisIn").addEventListener("keydown", e => { if(e.key === "Enter") sendFrom("jarvisIn","jarvisLog"); });
+
+    const notesArea = document.getElementById("notesArea");
+    notesArea.value = userSettings.notes || "";
+    notesArea.addEventListener("input", () => {
+      userSettings.notes = notesArea.value;
+      document.getElementById("notesSaved").textContent = "Saving…";
+      clearTimeout(notesSaveTimer);
+      notesSaveTimer = setTimeout(async () => {
+        await persistUserDoc();
+        document.getElementById("notesSaved").textContent = "Saved to Firestore.";
+      }, 600);
+    });
+  }
+</script>
+
+</body>
+</html>
